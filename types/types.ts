@@ -97,5 +97,11 @@ export interface Level {
 
 // For each language e.g: curriculum EN-AR (arabic for english speakers) or AR-AR
 export interface Curriculum {
+  id?: string;
+  slug: string;
+  title: string;
+  languageOfInstruction: string;
+  targetLanguage: string;
   levels: Level[];
+  meta?: Record<string, unknown>;
 }

@@ -87,6 +87,9 @@ def model_name() -> str:
 def embed_model() -> str:
     return os.environ.get("OPENAI_EMBED_MODEL", "text-embedding-3-small")
 
+def announce_model(context: str) -> None:
+    typer.echo(f"[Model] {context}: {model_name()}")
+
 
 # ---------- Helpers ----------
 
@@ -115,7 +118,13 @@ def embed_texts(client: OpenAI, texts: List[str]) -> List[List[float]]:
     return [d.embedding for d in resp.data]
 
 
-def bundle_curriculum_output(curriculum_path: pathlib.Path, curriculum_id: str, output_path: pathlib.Path) -> None:
+def bundle_curriculum_output(
+    curriculum_path: pathlib.Path,
+    curriculum_id: str,
+    output_path: pathlib.Path,
+    language_of_instruction: str,
+    target_language: str,
+) -> None:
     with open(curriculum_path, "r", encoding="utf-8") as f:
         plan = json.load(f)
 
@@ -123,7 +132,21 @@ def bundle_curriculum_output(curriculum_path: pathlib.Path, curriculum_id: str, 
     if not base_dir.exists():
         raise SystemExit(f"No generated lessons found for curriculum_id={curriculum_id} under {base_dir}")
 
-    bundled = {"levels": []}
+    lang_instruction = plan.get("languageOfInstruction") or language_of_instruction
+    tgt_language = plan.get("targetLanguage") or target_language
+    slug = plan.get("slug") or curriculum_id
+    title = plan.get("title") or f"{lang_instruction} → {tgt_language}"
+    bundled = {
+        "slug": slug,
+        "title": title,
+        "languageOfInstruction": lang_instruction,
+        "targetLanguage": tgt_language,
+        "levels": [],
+    }
+    if plan.get("id"):
+        bundled["id"] = plan["id"]
+    if "meta" in plan:
+        bundled["meta"] = plan["meta"]
     missing = []
 
     seen_level_ids = set()
@@ -219,6 +242,7 @@ def author_one(
     src_language = get_source_language(source_lang)
     tgt_language = get_target_language(target_lang)
 
+    announce_model("author-one")
     user_prompt = LESSON_PROMPT_TEMPLATE.format(
         module_title=module,
         lesson_title=lesson,
@@ -289,6 +313,10 @@ def author_batch(
     Author all lessons from a curriculum file.
     Expected schema (minimal):
     {
+      "slug": "curriculum-id",
+      "title": "English → Arabic",
+      "languageOfInstruction": "English",
+      "targetLanguage": "Arabic",
       "levels":[
         {"title":"Level 1","modules":[
           {"title":"Module A","lessons":[{"title":"...", "slug":"..."}, ...]}
@@ -309,6 +337,7 @@ def author_batch(
     src_language = get_source_language(source_lang)
     tgt_language = get_target_language(target_lang)
     curr_id = resolve_curriculum_id(curriculum_id, src_language, tgt_language)
+    announce_model("author-batch")
 
     for level in plan.get("levels", []):
         for module in level.get("modules", []):
@@ -397,7 +426,13 @@ def author_batch(
     typer.echo(f"✓ Batch complete. Authored: {authored} lessons.")
 
     if bundle_output:
-        bundle_curriculum_output(curriculum, curr_id, bundle_output)
+        bundle_curriculum_output(
+            curriculum,
+            curr_id,
+            bundle_output,
+            src_language,
+            tgt_language,
+        )
         typer.echo(f"✓ Bundled curriculum saved to {bundle_output}")
 
 
@@ -415,7 +450,7 @@ def bundle_curriculum(
     src_language = get_source_language(source_lang)
     tgt_language = get_target_language(target_lang)
     curr_id = resolve_curriculum_id(curriculum_id, src_language, tgt_language)
-    bundle_curriculum_output(curriculum, curr_id, output)
+    bundle_curriculum_output(curriculum, curr_id, output, src_language, tgt_language)
     typer.echo(f"✓ Bundled lessons from {curr_id} into {output}")
 
 
@@ -449,6 +484,7 @@ def ask(q: str = typer.Option(..., help="Question about previously authored less
     )
     system_prompt = f"You are Kitabite's curriculum librarian. Keep answers concise but accurate. Maintain the same voice and definitions. Style guide:\n\n{style}".strip()
 
+    announce_model("ask")
     resp = client.chat.completions.create(
         model=model_name(),
         messages=[{"role":"system", "content": system_prompt},

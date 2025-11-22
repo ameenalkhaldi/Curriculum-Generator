@@ -11,17 +11,22 @@ from typing import List, Optional
 import typer
 
 from author_lessons import openai_client, model_name
+from memory import normalize_slug
 
 app = typer.Typer(help="Generate curriculum plans for new language pairs")
 
 
 PLAN_PROMPT = """Design a curriculum plan for language learners.
 
-Learners speak: {source_language}
-They are learning: {target_language}
+Language of instruction (explanations): {source_language}
+Language being taught: {target_language}
 
 Output JSON with this exact schema:
 {{
+  "slug": "short-hyphenated-lang-pair-id",
+  "title": "{source_language} → {target_language}",
+  "languageOfInstruction": "{source_language}",
+  "targetLanguage": "{target_language}",
   "levels": [
     {{
       "id": "slug-or-short-id",
@@ -51,6 +56,10 @@ Rules:
 - Each module should contain {lessons_per_module} lessons (±1 ok).
 - Include lesson briefs when guidance will help the authoring step (e.g., highlight pronunciation pitfalls, comparative grammar, culture notes).
 - Slugs must be lowercase, hyphen-separated, and unique across the file.
+- Set the slug to a concise lowercase identifier for this language pair (e.g., en-ar, ar-en, en-es).
+- The title should read "{source_language} → {target_language}" unless a better, equally short variant is obvious.
+- languageOfInstruction MUST exactly match "{source_language}".
+- targetLanguage MUST exactly match "{target_language}".
 - Lean on communicative competence: mix grammar, usage, mini-dialogues, and culture checkpoints.
 - Match the proficiency arc from basic foundations to advanced fluency.
 {level_notes_section}
@@ -125,8 +134,30 @@ def plan(
         typer.echo(content)
         raise SystemExit(f"Model returned invalid JSON: {exc}")
 
+    levels = data.get("levels")
+    if not isinstance(levels, list):
+        raise SystemExit("Model response is missing a 'levels' array.")
+
+    fallback_slug = normalize_slug(f"{source_lang}-to-{target_lang}")
+    lang_of_instruction = data.get("languageOfInstruction") or source_lang
+    tgt_language = data.get("targetLanguage") or target_lang
+    slug = data.get("slug") or fallback_slug or "curriculum"
+    title = data.get("title") or f"{lang_of_instruction} → {tgt_language}"
+
+    curriculum = {
+        "slug": slug,
+        "title": title,
+        "languageOfInstruction": lang_of_instruction,
+        "targetLanguage": tgt_language,
+        "levels": levels,
+    }
+    if "id" in data:
+        curriculum["id"] = data["id"]
+    if "meta" in data:
+        curriculum["meta"] = data["meta"]
+
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    output.write_text(json.dumps(curriculum, ensure_ascii=False, indent=2), encoding="utf-8")
     typer.echo(f"✓ Curriculum saved to {output}")
 
 

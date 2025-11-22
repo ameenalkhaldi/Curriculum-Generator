@@ -6,6 +6,7 @@ Python CLI utilities for authoring Arabic-first lessons, batching an entire curr
 - Python 3.10+
 - OpenAI API access (chat + embeddings)
 - `pip install openai typer python-dotenv`
+- Optional: `pip install streamlit` if you want the browser dashboard.
 
 Optional (Windows PowerShell):
 ```powershell
@@ -19,9 +20,9 @@ Place secrets in `.env` (loaded via `python-dotenv`) or set them in PowerShell b
 | Variable | Required | Notes |
 | --- | --- | --- |
 | `OPENAI_API_KEY` | ✅ | Use an API key with access to the chosen model + embeddings. Example: `$env:OPENAI_API_KEY="sk-..."` (session only) or `setx OPENAI_API_KEY "sk-..."` (persists). |
-| `OPENAI_MODEL` | optional | Defaults to `gpt-4o-mini`. Set to any chat-completions model you prefer. |
+| `OPENAI_MODEL` | optional | Defaults to `gpt-4o-mini`. Set to any chat-completions model you prefer (CLI prints the active model at runtime). |
 | `OPENAI_EMBED_MODEL` | optional | Defaults to `text-embedding-3-small`. |
-| `CURRICULUM_SOURCE_LANG` | optional | Default `English`. Set to the learner’s base/explanation language (the voice used for prose and quiz wording). |
+| `CURRICULUM_SOURCE_LANG` | optional | Default `English`. Set to the language of instruction (the voice used for prose and quiz wording). |
 | `CURRICULUM_TARGET_LANG` | optional | Default `Arabic`. Set to the language being taught (used for examples, vocab, and transliteration cues). |
 | `CURRICULUM_ID` | optional | Override the namespace used under `generated/` and for bundled files (defaults to `<source>-to-<target>`). |
 
@@ -43,6 +44,12 @@ The menu walks you through:
 - Asking questions about memory
 - Bundling existing lessons into a single JSON file
 - Rebuilding the memory index if you delete or import lessons
+
+Want something even simpler? Launch the dropdown-driven web dashboard (requires `pip install streamlit` once):
+```powershell
+streamlit run scripts/ui_dashboard.py
+```
+The dashboard runs in your browser, shows per-curriculum progress (lessons completed / total), and displays a live status indicator while commands are running—all via dropdowns and buttons instead of manual flags.
 
 The CLI automatically creates two working directories at the repo root:
 - `generated/<curriculum_id>/<module_slug>/<lesson_slug>.json` – finalized lesson payloads (blocks + quiz), namespaced per curriculum (e.g., `generated/english-to-arabic/basic-concepts/definition-of-nahw-101.json`).
@@ -106,19 +113,19 @@ Many teams build multiple curricula (e.g., English→Arabic, English→French, A
    Reopen PowerShell so the variables load, then author lessons normally.
 
 2. **Command overrides (one-off jobs)**
-   Add `--source-lang "Arabic"` and `--target-lang "English"` to `author-one` or `author-batch`.
+   Add `--source-lang "Arabic"` (language of instruction) and `--target-lang "English"` (language being taught) to `author-one` or `author-batch`.
 
 3. **Reflect it in your style + curriculum**
    - Mention the direction in `samples/seed_lesson.md` (e.g., “Explain grammar in English while teaching Arabic examples”).
    - Include hints in `curriculum.json` briefs when special translation behavior is needed (“Provide French glosses wherever students might confuse gender agreement.”).
 
-**Reminder:** `source-lang` = explanation language (all prose, headings, quiz stems). `target-lang` = language being taught (appears inside examples/terms with fast translations).
+**Reminder:** `source-lang` = language of instruction (all prose, headings, quiz stems). `target-lang` = language being taught (appears inside examples/terms with fast translations).
 
 4. **Namespace each curriculum**
    - Let the CLI derive the folder name (`<source>-to-<target>`) or set `CURRICULUM_ID` / `--curriculum-id` yourself (e.g., `msa-beginners`, `en-to-fr`).
    - Every run then writes to `generated/<curriculum_id>/...`, so multiple curricula never collide and each can be bundled separately.
 
-Each lesson prompt now includes the source/target info, so the OpenAI model always knows which learners it is addressing for that run. Switching to a new curriculum is as simple as adjusting the env vars (or flags) plus pointing to the new `curriculum.json`.
+Each lesson prompt now includes the language-of-instruction / language-being-taught info, so the OpenAI model always knows which learners it is addressing for that run. Switching to a new curriculum is as simple as adjusting the env vars (or flags) plus pointing to the new `curriculum.json`.
 
 ## Preparing your curriculum plan
 `author-batch` expects a JSON file, so keep any Markdown outline as your planning document and export it to JSON before running the CLI.
@@ -136,6 +143,7 @@ Each lesson prompt now includes the source/target info, so the OpenAI model alwa
 
 ### 2. Convert the outline to JSON
 - Create `curriculum.json` at the repo root (or inside a `curricula/` folder).
+- Add top-level metadata so bundling knows how to describe the curriculum (set `"slug"` to the ID you use for `--curriculum-id`, `"title"` to something like `"English → Arabic"`, and the exact `"languageOfInstruction"` / `"targetLanguage"` strings).
 - Map each Markdown concept to the fields the CLI expects:
 
 | Markdown concept | JSON key |
@@ -147,6 +155,10 @@ Each lesson prompt now includes the source/target info, so the OpenAI model alwa
 Example JSON generated from the Markdown above:
 ```json
 {
+  "slug": "en-ar",
+  "title": "English → Arabic",
+  "languageOfInstruction": "English",
+  "targetLanguage": "Arabic",
   "levels": [
     {
       "title": "Level 1 – Foundations",
@@ -202,7 +214,7 @@ python scripts/generate_curriculum.py plan `
   --focus "Travel + conversational confidence"
 ```
 - Add multiple `--level-note "..."` flags if you want to steer each level (“Level 1 = pronunciation foundations”, etc.).
-- The script returns a JSON file formatted exactly like `samples/curriculum.json`, ready for `author-batch`.
+- The script returns a JSON file formatted exactly like `samples/curriculum.json` (slug/title/language metadata + levels/modules/lessons), ready for `author-batch`.
 
 ### Author a single lesson
 ```powershell
@@ -220,7 +232,7 @@ Inputs:
 - `--lesson` – lesson title.
 - `--slug` – unique slug used for file names and tags (auto-normalized).
 - `--brief` – optional per-lesson instructions or emphasis.
-- `--source-lang` – overrides `CURRICULUM_SOURCE_LANG` (the language used for explanations/quiz text).
+- `--source-lang` – overrides `CURRICULUM_SOURCE_LANG` (the language of instruction used for explanations/quiz text).
 - `--target-lang` – overrides `CURRICULUM_TARGET_LANG` (the language being taught, used for examples and vocabulary).
 - `--curriculum-id` – forces output into `generated/<curriculum-id>/...` (defaults to `<source>-to-<target>`).
 
@@ -239,9 +251,13 @@ python scripts/author_lessons.py author-batch `
   --curriculum-id "english-to-arabic" `
   --bundle-output final/curriculum.english-to-arabic.json
 ```
-`curriculum.json` must include levels → modules → lessons:
+`curriculum.json` must include curriculum metadata plus levels → modules → lessons:
 ```json
 {
+  "slug": "english-to-arabic",
+  "title": "English → Arabic",
+  "languageOfInstruction": "English",
+  "targetLanguage": "Arabic",
   "levels": [
     {
       "title": "Level 1",
@@ -260,7 +276,7 @@ python scripts/author_lessons.py author-batch `
 Flags:
 - `--filter-module` – run only the matching module title or slug.
 - `--start-at` – skip lessons until this slug is reached (useful for resumable jobs).
-- `--source-lang` / `--target-lang` – override the explanation language vs. taught language for this batch.
+- `--source-lang` / `--target-lang` – override the language of instruction vs. language being taught for this batch.
 - `--curriculum-id` – set the namespace folder for generated lessons (defaults to `<source>-to-<target>`).
 - `--bundle-output` – after generation, stitch every lesson into one JSON file matching the curriculum skeleton.
 

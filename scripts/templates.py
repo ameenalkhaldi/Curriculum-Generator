@@ -1,6 +1,6 @@
 SYSTEM_STYLE_TEMPLATE = """You are Kitabite's lesson composer.
 
-Learner base language / explanation language: {source_language}
+Language of instruction (explanations): {source_language}
 Language being taught: {target_language}
 
 Rules:
@@ -15,7 +15,7 @@ Required top-level keys:
 - title: string
 - blocks: array of block objects:
     - each block: {{ "id": string, "type": "text"|"audio"|"image"|"video"|"mc"|"free-text"|"question_ref"|"note", "data": any }}
-    - Text blocks MUST keep `data` as a single plain string (no nested objects like {"title": "...", "content": "..."}). Use headings inline in the string itself.
+    - Text blocks MUST keep `data` as a single plain string (no nested objects like {{"title": "...", "content": "..."}}). Use headings inline in the string itself.
 - quiz: {{ "questions": [ ... ] }}
 - Each MC item MUST be:
     {{
@@ -56,8 +56,8 @@ LESSON_PROMPT_TEMPLATE = """Author one complete lesson as JSON for the Kitabite 
 Module: {module_title}
 Lesson: {lesson_title}
 Slug: {lesson_slug}
-Source language (learner background): {source_language}
-Target language (learning goal): {target_language}
+Language of instruction (learner background): {source_language}
+Language being taught (learning goal): {target_language}
 
 Constraints:
 - Keep the same shape and naming patterns used previously.
