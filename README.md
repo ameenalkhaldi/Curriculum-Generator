@@ -318,6 +318,33 @@ python scripts/author_lessons.py bundle-curriculum `
 ```
 The command reads every lesson JSON from `generated/<curriculum-id>/...`, inserts them back into the curriculum skeleton, auto-generates missing `id` fields for levels/modules (slugged from their titles), and writes a single deliverable file.
 
+### Post-process a bundled curriculum
+Need to make surgical edits without re-authoring every lesson? Run the cleanup helper on the merged JSON (or an entire directory of lessons):
+```powershell
+python scripts/postprocess_curriculum.py run `
+  final/curriculum.ar-fa.json `
+  --instructions scripts/rules/remove_english_glosses.json `
+  --dry-run
+```
+- Drop `--dry-run` to write in place. Add `--output-dir cleaned` if you prefer keeping the originals untouched.
+- `scripts/rules/remove_english_glosses.json` shows how to define instructions. Each rule has a `type` (`replace`, `regex_sub`, `append`, `prepend`), an optional list of `paths` to limit matches (e.g., only strings under `blocks`), and the text/regex payload.
+- Example rule: remove English glosses wrapped in parentheses.
+  ```json
+  {
+    "instructions": [
+      {
+        "description": "Remove inline English glosses",
+        "type": "regex_sub",
+        "pattern": "\\\\s*\\((?=.*[A-Za-z])[A-Za-z0-9 ,/'\\\\-]+\\)",
+        "replacement": "",
+        "paths": ["blocks", "quiz"],
+        "flags": ["IGNORECASE"]
+      }
+    ]
+  }
+  ```
+- Chain multiple rules inside the same file to add, remove, or normalize snippets across the curriculum.
+
 ### Fix older lessons that used nested text blocks
 If you generated lessons before the “plain string text blocks” rule, run the migration script to flatten those blocks:
 ```powershell
