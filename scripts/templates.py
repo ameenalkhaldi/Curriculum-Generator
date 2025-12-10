@@ -40,8 +40,11 @@ Required top-level keys:
     }}
 
 INVARIANTS:
-- Keep tone: clean, student-friendly, university-level but not intimidating.
-- Prefer small sections with bold headings, worked examples, and concise key takeaways.
+- Keep tone: clean, student-friendly, smart-teenager level but not intimidating.
+- Assume the learner may be seeing this topic for the first time; define every new term in plain {source_language} before using notation or jargon.
+- Prefer small sections with bold headings, multiple worked examples, and clear step-by-step explanations before each quiz question.
+- Make each lesson a one-stop resource: a teenager should not need to consult anything outside this lesson to understand the core idea.
+- Avoid large text walls: break explanations into short paragraphs and, when a new subtopic starts, use a new text block with a clear bold heading.
 - Use Arabic terms with quick English gloss where helpful.
 - No external links. No markdown in JSON (plain text only).
 - Do not invent new block types beyond the allowed ones above.
@@ -63,7 +66,11 @@ Constraints:
 - Keep the same shape and naming patterns used previously.
 - Include a short "Lesson Objectives" block at the start (type: text).
 - Use friendly but precise explanations in {source_language}. Introduce {target_language} terminology only inside examples or gloss tables, always paired with an immediate {source_language} translation.
-- Use worked mini-examples and a crisp "Key Takeaways" at the end.
+- Make the lesson fully self-contained: if a teenager only reads this lesson, they should understand the core ideas, definitions, and typical uses for this topic without asking anyone else.
+- For each key concept, provide: (1) a simple definition, (2) several contrasting examples and non-examples, and (3) a short note about when/why it is used.
+- Include at least one "Common Mistakes" section (type: text) that lists typical confusions and corrected versions with brief explanations.
+- Use worked mini-examples throughout, not just once, and end with a clear "Key Takeaways" block that summarizes the rules in simple bullet points.
+- Organize the lesson into clearly labeled sections with bold or Markdown-style headings (e.g., "### Lesson Objectives", "### Definitions", "### Examples", "### Common Mistakes", "### Key Takeaways") so that content is grouped, not a single large text wall.
 - Add questions within the lesson as needed (type: mc or free-text), to make the lesson interactive. Questions should relate to the information just discussed and serve as examples and proof of understanding.
 - When structured comparisons help, use Markdown formatting (lists, tables via GFM) since the frontend renders those components. Also use Markdown bolding if helpful.
 - Write 10–14 quiz questions: mostly MC, 2–4 free-text. ALL tagged like our convention.
