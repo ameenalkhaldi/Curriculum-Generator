@@ -370,6 +370,12 @@ def main() -> None:
             target_lang = st.text_input("Language being taught", value=get_target_language(), key="plan_target")
             modules_per_level = st.number_input("Modules per level", min_value=1, max_value=8, value=4, step=1)
             focus = st.text_input("Overall focus (optional)", key="plan_focus")
+            audience = st.selectbox(
+                "Target audience",
+                options=["university", "high-school"],
+                format_func=lambda val: "High school (plain language)" if val == "high-school" else "University/adult",
+                key="plan_audience",
+            )
         output_path = st.text_input(
             "Where should we save the curriculum JSON?",
             value=str(ROOT / "curricula" / "new-curriculum.json"),
@@ -395,6 +401,7 @@ def main() -> None:
                 lessons_per_module=int(lessons_per_module),
                 level_note=level_notes,
                 focus=focus or None,
+                audience=audience,
             )
             if log:
                 st.code(log, language="text")

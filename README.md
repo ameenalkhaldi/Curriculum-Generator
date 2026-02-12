@@ -211,9 +211,11 @@ python scripts/generate_curriculum.py plan `
   --level-count 4 `
   --modules-per-level 4 `
   --lessons-per-module 4 `
+  --audience high-school `
   --focus "Travel + conversational confidence"
 ```
 - Add multiple `--level-note "..."` flags if you want to steer each level (“Level 1 = pronunciation foundations”, etc.).
+- Use `--audience high-school` to keep terminology plain (no linguistics jargon) and target secondary-school learners instead of university-level plans.
 - The script returns a JSON file formatted exactly like `samples/curriculum.json` (slug/title/language metadata + levels/modules/lessons), ready for `author-batch`.
 
 ### Author a single lesson

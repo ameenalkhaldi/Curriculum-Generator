@@ -20,6 +20,7 @@ PLAN_PROMPT = """Design a curriculum plan for language learners.
 
 Language of instruction (explanations): {source_language}
 Language being taught: {target_language}
+Audience: {audience_label}
 
 Output JSON with this exact schema:
 {{
@@ -62,7 +63,7 @@ Rules:
 - targetLanguage MUST exactly match "{target_language}".
 - Lean on communicative competence: mix grammar, usage, mini-dialogues, and culture checkpoints.
 - Match the proficiency arc from basic foundations to advanced fluency.
-{level_notes_section}
+{audience_rules}{level_notes_section}
 {extra_focus}
 
 Return ONLY the JSON object. No commentary.
@@ -77,11 +78,23 @@ def build_prompt(
     lessons_per_module: int,
     level_notes: List[str],
     focus: Optional[str],
+    audience: str,
 ) -> str:
     notes = ""
     if level_notes:
         bullet = "\n".join([f"- Level {idx+1}: {text}" for idx, text in enumerate(level_notes)])
         notes = f"Level-specific guidance:\n{bullet}\n"
+
+    normalized_audience = audience.lower().strip()
+    audience_label = "University/college or adult learners"
+    audience_rules = ""
+    if normalized_audience == "high-school":
+        audience_label = "High school students (secondary education)"
+        audience_rules = (
+            "Audience adjustments:\n"
+            "- Keep the scope and tone appropriate for high school learners; prioritize teen-relevant contexts over university seminars.\n"
+            "- Avoid linguistics jargon; explain grammar, sounds, and usage in plain language.\n"
+        )
     extra = f"Overall emphasis: {focus}" if focus else ""
     return PLAN_PROMPT.format(
         source_language=source_language,
@@ -91,6 +104,8 @@ def build_prompt(
         lessons_per_module=lessons_per_module,
         level_notes_section=notes,
         extra_focus=extra,
+        audience_label=audience_label,
+        audience_rules=audience_rules,
     )
 
 
@@ -104,6 +119,13 @@ def plan(
     lessons_per_module: int = typer.Option(4, min=1, max=10, help="Approximate lessons per module"),
     level_note: List[str] = typer.Option([], help="Optional text for each level (provide multiple --level-note entries)"),
     focus: Optional[str] = typer.Option(None, help="Overall curricular focus (e.g., business travel, academic writing)"),
+    audience: str = typer.Option(
+        "university",
+        "--audience",
+        help="Target audience ('university' or 'high-school'). High-school keeps jargon light and tone teen-friendly.",
+        case_sensitive=False,
+        show_default=True,
+    ),
 ) -> None:
     """
     Generate a curriculum skeleton ready for author-batch.
@@ -117,6 +139,7 @@ def plan(
         lessons_per_module=lessons_per_module,
         level_notes=level_note,
         focus=focus,
+        audience=audience,
     )
     system = "You design structured curricula with clear sequencing."
     resp = client.chat.completions.create(

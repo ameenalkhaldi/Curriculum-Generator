@@ -121,6 +121,10 @@ def handle_generate_curriculum() -> None:
                 level_notes.append(note)
 
     focus = _prompt_optional("Overall focus (e.g., travel, academic, business)")
+    audience = typer.prompt("Target audience ('university' or 'high-school')", default="university").strip().lower()
+    if audience not in ("university", "high-school"):
+        typer.echo("Unrecognized audience; defaulting to 'university'.", err=True)
+        audience = "university"
 
     plan_curriculum(
         output=output_path,
@@ -131,6 +135,7 @@ def handle_generate_curriculum() -> None:
         lessons_per_module=lessons_per_module,
         level_note=level_notes,
         focus=focus,
+        audience=audience,
     )
 
 
